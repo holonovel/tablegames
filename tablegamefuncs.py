@@ -36,79 +36,110 @@ def highscore(p):
 	scores.sort() # Sort scores low to high
 	return scores.pop(len(p) - 1) # Check highest score
 
-#https://en.wikipedia.org/wiki/List_of_dice_games
+# Declare Scores: used by Greed
+def declscore(p, t):
+	scores = []
+	for w in p:
+		if w != t:
+			scores.append(p[w].score)
+	return scores
 
-#Press your luck
-#	Dungeon Roll
-#	Dragon Slayer
-#	Greed
-#	Firefly
-#	Farkle
-#	Cosmic Wimpout
-#	Cinq-O
-#	Can't Stop
-#	Ten Thousand
-#	Backgammon
-#	Pickomino
-#	Fill or Bust
-#	Hoppladi Hopplada
-#	Excape
-#	Pig
-#	Reiner Knizia's Decathlon
-#	Sushizock im Gockelwok
-#	Roll Through the Ages: The Bronze Age
-#	Second Story
-#	Cookie Fu
-#	Pass the Pigs
-#	Train Wreck
-#	Toss Up
-#	Mountain Climber
-#	Cloud 9
-#	Pachisi
-#	Risk Express
-#	Aggravation
-#	Joker Marbles
-#	Sorry!
-#	DOG
-#	CirKle Duo228
-#	King of Tokyo
-#Dice placement
-#	Steampunk Rally
-#Dice Drafting
-#	Roll Player
-#Roll and Write
-#	Yahtzee
-#	Twenty One
-#	Dice Stars
-#	Noch Mal!
-#	Qwixx
-#	Rolling America
-#	Ganz Schon Clever
-#	Qwinto
-#	Let's Make a Bus Route
-#	Kokoro / Avenue -- Avenue has dice
-#	Saint Malo
+### Greed Functions ###
 
-#Noctiluca
-#Seasons
-#Roll for the Galaxy
-#Dice Masters
-#Yahtzee
-#Bilge Dice
-#Dice Poker
-#Craps
-#Shut the Box
-#Balut
-#Beetle
-#Poker Dice
-#Bunco
-#Cee-lo
-#Dragon Dice
-#Diceland
-#Battle Dice
-#Sic bo
-#Liar's dice
-#Kismet
-#Pugasaing
+# Stop rolling: used by Greed
+def greedkeep(tally):
+	tally.unbanked += (tally.hardscore + tally.softscore) # add everything to unbanked
+	tally.dnum = 0 # stop rolling
 
-#Button Men
+# Greed dice tally: used by Greed
+def greedtally(tally):
+	count = {}
+	for w in tally.dice: # count duplicates
+		count[w] = count.get(w, 0) + 1
+	for w in count: # identify triples
+		if count[w] > 2:
+			tally.triple = w
+	if tally.triple > 0: # remove triples
+		tally.dice.remove(tally.triple)
+		tally.dice.remove(tally.triple)
+		tally.dice.remove(tally.triple)
+	for w in tally.dice: # sort scoring dice
+		if w == 1: # If ones,
+			tally.hardscore += 100 # add 100 to hardscore
+			tally.dnum -= 1 # remove them from dice that can be rolled.
+		elif w == 5: # If fives,
+			tally.softscore += 50 # add 50 to softscore
+			tally.softscoring += 1 # add 1 to softscoring.
+	if tally.triple > 1: # If triples are not ones,
+		tally.softscore += tally.triple * 100 # add them to softscore
+		tally.softscoring += 3 # and to softscoring.
+	elif tally.triple == 1: # If triples is ones,
+		tally.hardscore += 1000 # add 1000 to hardscore
+		tally.dnum -= 3 # remove them from dice that can be rolled.
+	if tally.hardscore + tally.softscore == 0: # If none scoring
+		tally.unbanked = 0 # No unbanked
+		tally.dnum = 0 # No dice
+	if tally.softscoring == tally.dnum and tally.dnum != 0: # If all scoring,
+		tally.dnum = 5 # all dice can now be rolled,
+		tally.unbanked += (tally.hardscore + tally.softscore) # add everything to unbanked
+		tally.hardscore, tally.softscore = 0, 0 # clear hard and soft
+
+def greedtreset(tally):
+	tally.softscore = 0
+	tally.triple = 0
+	tally.softscoring = 0
+	tally.unbanked += tally.hardscore
+	tally.hardscore = 0
+
+# Greed strategy: used by Greed
+def greedstrategy(tally, t, p):
+	if p[t].strat == 1: # default AI
+		if tally.dnum < 3 and tally.dnum > 0: # If less than 3 dice, 
+			greedkeep(tally)
+		elif tally.dnum == 3 and tally.hardscore + tally.softscore > 250: # If 3 dice and 250+
+			greedkeep(tally)
+	else: # human player or neural net
+		if tally.dnum == 0: # If human player busts
+			if p[t].strat == 0:
+				print("Bust.") # Report. Situation resolves automatically
+		else:
+			x = ""
+			options = ["0", "1"]
+			print(tally.softscore, tally.hardscore, tally.dnum) ####
+			while x not in options:
+				if p[t].strat == 0: # player has no softscoring
+					print("0: Keep,", end=" ")
+					print("1: Roll max,", end=" ")
+				if tally.softscore > 0: # player has simple softscoring
+					if "2" not in options:
+						options.append("2")
+					if p[t].strat == 0:
+						print("2: Roll only non-scoring,", end=" ")
+				if tally.softscore == 100: # player has two fives
+					if "3" not in options:
+						options.append("3")
+					if p[t].strat == 0:
+						print("3: Keep only one five,", end=" ")
+				if tally.softscore in (250, 350, 450, 550): # player has triple and five
+					if "3" not in options:
+						options.append("3")
+					if p[t].strat == 0:
+						print("3: Keep only one five,", end=" ")
+					if "4" not in options:
+						options.append("4")
+					if p[t].strat == 0:
+						print("4: Keep only triple,", end=" ")
+				x = input("Your choice? ")
+				if x not in options and p[t].strat == 0:
+					print("Invalid input.")
+			if x == "0": # Stop rolling. No need to check if x == 1, because that's default behavior.
+				greedkeep(tally)
+			elif x == "2": # Keeping all scoring, rolling the rest
+				tally.unbanked += tally.softscore
+				tally.dnum -= tally.softscoring
+			elif x == "3":
+				tally.unbanked += 50
+				tally.dnum -= 1
+			elif x == "4":
+				tally.unbanked += (tally.softscore - 50)
+				tally.dnum -= 3

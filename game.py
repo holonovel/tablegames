@@ -6,6 +6,7 @@
 #                 Which game is to be played. Greed is game 1.
 
 import argparse
+from random import randrange
 
 parser = argparse.ArgumentParser(description='Play games.')
 parser.add_argument('game_settings', type=int, nargs=3)
@@ -21,7 +22,7 @@ class APlayer:
 	def __init__(self):
 		self.score = 0
 		self.wins = 0
-		self.strat = 0
+		self.strat = 1 # 0 is player, 1 is default AI, 2 is neural net
 
 ### Game Setups ###
 
@@ -35,11 +36,13 @@ def asetup(pnum):
 ### Game List ###
 
 # Play Greed
-def playgreed(p, stuff):
+def playgreed(p, stuff, gamesplayed):
+	if gamesplayed == 1: # If we're only playing one game
+		p[randrange(1, (len(p)+1))].strat = 0 # Set a random player to human control
 	from greed import greedgame
 	greedgame(p, stuff)
 
-def playpig(p, stuff):
+def playpig(p, stuff, gamesplayed):
 	from pig import piggame
 	piggame(p, stuff)
 
@@ -82,29 +85,7 @@ p, stuff = setuplist[game](pnum)
 for _ in range(gamesplayed): # Play this many games
 	resetlist[game](p, stuff)
 
-	play[game](p, stuff)
+	play[game](p, stuff, gamesplayed)
 
 reportlist[game](p)
 
-# Greed strategy discussion:
-# P[i][j][k] is the player's probability of winning if the player's score is i, the opponent's score is j, and the player's unbanked is k
-
-# i = 9700 to 9950, j = 9950, k = 0
-# P[i][j][k] = ~96%
-
-# i = 9650, j = 9950, k = 0
-# P[i][j][k] = ~74%
-
-# i = 9600, j = 9950, k = 0
-# P[i][j][k] = ~64%
-
-# i = 8000, j = 9950, k = 0
-# P[i][j][k] = ~3%
-
-# i = 7600, j = 9950, k = 0
-# P[i][j][k] = ~1%
-
-# i = 0 to 7550, j = 9950, k = 0
-# P[i][j][k] = >1%
-
-# I think to figure this out, we need to MC a one-player varient to figure out how likely a player is to win on their next turn.
